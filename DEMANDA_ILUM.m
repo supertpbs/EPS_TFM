@@ -1,0 +1,50 @@
+function [E_ilum] = DEMANDA_ILUM(P_ilum, Cap_real, Cap_hostes_max,coef_ruido)
+    % ILUMINACIÓN PARAMETROS
+    curva_uso = [0.75, 0.4, 0.25, 0.22, 0.21, 0.22, 0.25, 0.4, 0.6, 0.57, 0.5, 0.45, 0.5, 0.53, 0.5, 0.45, 0.41, 0.4, 0.47, 0.57, 0.7, 0.8, 0.8, 0.77];
+    curva_uso_anual = repmat(curva_uso(:), 365, 1);
+    curva_uso_anual = curva_uso_anual(:);
+    cap_real_horari = repelem(Cap_real, 24);
+    R_Solar = IMPORTAR_RADIAC('R_FLAT.csv');
+
+    %% Calcular factor de reducción (por sol y por capacidad hotel)
+    K_r_ocup=(1 - (cap_real_horari ./ Cap_hostes_max)) .* 0.75;
+    K_r_ocup = K_r_ocup';
+    K_r_sol=(R_Solar ./ 1000) .* 0.3;
+    ruido = coef_ruido * (2*rand(size(K_r_ocup)) - 1);
+    K= 1-K_r_sol-K_r_ocup+ruido;
+
+    E_ilum = P_ilum .* curva_uso_anual .* K; 
+
+    %% comparar horas verano-invierno
+    horas_verano = (153 * 24):(153 * 24 + 72); % Horas de verano
+    potencia_verano = E_ilum(horas_verano);
+    horas_invierno = (336 * 24):(336 * 24 + 72); % Horas de invierno
+    potencia_invierno = E_ilum(horas_invierno);
+    %% plot curva uso
+    configurarGrafica(0)
+    plot(curva_uso)
+    xlim([1 24])
+    ylim([0 1])
+    xlabel("hores del dia")
+    ylabel("Percentatge de consum(%)")
+    title("Corba de consum elèctric en funció de la potència màxima")
+    
+    %% plot potencia iluminación
+    configurarGrafica(8760);
+    plot(E_ilum);
+    title('Potència de iluminació demandanda horaria');
+    ylabel('Potència [kW]');
+    ylim([0 P_ilum]); % Limitar el eje Y entre 0 y P_ilum
+
+    %% Graficar las potencias necesarias
+    configurarGrafica(0);
+
+    plot(0:72, potencia_verano, 'b', 'LineWidth', 2, 'DisplayName', '1-3 juny (72h)'); % Verano en azul
+    plot(0:72, potencia_invierno, 'r', 'LineWidth', 2, 'DisplayName', '1-3 desembre (72h)'); % Invierno en rojo
+    xlabel('Hores');
+    ylabel('Potència [kW]');
+    title('Potència necesària d''iluminació: estiu vs hivern');
+    legend show;
+    xlim([1 72]); % Limitar el eje X a 8760 horas
+    ylim([0 P_ilum]); % Limitar el eje Y entre 0 y P_ilum
+end
